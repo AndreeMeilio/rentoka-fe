@@ -1,14 +1,33 @@
 "use client";
 
 import { useState } from "react";
-import { Search } from "lucide-react";
+import { Search, Minus } from "lucide-react";
+
 import CarCard from "./CarCard";
 import CarDetail from "./CarDetail";
+import AddCar from "./ButtonAddCar";
+import RemoveCar from "./ButtonRemoveCar";
+
+export interface Car {
+  id: number;
+  name: string;
+  merk: string;
+  plat: string;
+  year: string;
+  status: string;
+  price: string;
+  imageColor: string;
+  image?: string;
+}
 
 export default function CarsPage() {
-  const [selectedCar, setSelectedCar] = useState<any>(null);
+  const [selectedCar, setSelectedCar] = useState<Car | null>(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
-  const cars = [
+  const [isRemoveMode, setIsRemoveMode] = useState(false);
+  const [carToDelete, setCarToDelete] = useState<Car | null>(null);
+
+  const [cars, setCars] = useState<Car[]>([
     {
       id: 1,
       name: "Toyota Agya",
@@ -18,6 +37,7 @@ export default function CarsPage() {
       status: "Status: disewa",
       price: "Rp 200.000",
       imageColor: "bg-blue-100",
+      image: "",
     },
     {
       id: 2,
@@ -28,6 +48,7 @@ export default function CarsPage() {
       status: "Status: tersedia",
       price: "Rp 150.000",
       imageColor: "bg-gray-100",
+      image: "",
     },
     {
       id: 3,
@@ -38,6 +59,7 @@ export default function CarsPage() {
       status: "Status: sedang disewakan",
       price: "Rp 220.000",
       imageColor: "bg-red-100",
+      image: "",
     },
     {
       id: 4,
@@ -48,8 +70,39 @@ export default function CarsPage() {
       status: "Status: sedang disewakan",
       price: "Rp 250.000",
       imageColor: "bg-orange-100",
+      image: "",
     },
-  ];
+  ]);
+
+  const handleAddCar = (
+    newCarData: Omit<Car, "id" | "status" | "imageColor">,
+  ) => {
+    const newCar: Car = {
+      id: Date.now(),
+      status: "Status: Tersedia",
+      imageColor: "bg-gray-100",
+      ...newCarData,
+    };
+    setCars((prevCars) => [...prevCars, newCar]);
+    setIsAddOpen(false);
+  };
+
+  const formatPrice = (price: string) => {
+    return price.toString().startsWith("Rp") ? price : `Rp ${price}/hari`;
+  };
+
+  const handleUpdateCar = (updateCar: Car) => {
+    setCars((prevCars) =>
+      prevCars.map((car) => (car.id === updateCar.id ? updateCar : car)),
+    );
+  };
+
+  const handleConfirmDelete = () => {
+    if (carToDelete) {
+      setCars((prevCars) => prevCars.filter((c) => c.id !== carToDelete.id));
+      setCarToDelete(null);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -77,28 +130,75 @@ export default function CarsPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {cars.map((car) => (
-          <CarCard
-            key={car.id}
-            name={car.name}
-            status={car.status}
-            price={car.price + "/hari"}
-            imageColor={car.imageColor}
-            onClick={() => setSelectedCar(car)}
-          />
+          <div key={car.id} className="relative group">
+            <CarCard
+              name={car.name}
+              status={car.status}
+              price={formatPrice(car.price)}
+              imageColor={car.imageColor}
+              onClick={() => !isRemoveMode && setSelectedCar(car)}
+            />
+
+            {isRemoveMode && (
+              <button
+                onClick={() => setCarToDelete(car)}
+                className="absolute -top-3 -right-3 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 hover:scale-110 transition-all animate-in zoom-in duration-200 z-10"
+              >
+                <Minus size={20} strokeWidth={3} />
+              </button>
+            )}
+
+            {isRemoveMode && (
+              <div className="absolute inset-0 bg-white/10 rounded-2xl pointer-events-none border-2 border-red-200 border-dashed animate-pulse"></div>
+            )}
+          </div>
         ))}
       </div>
 
       <div className="flex justify-center gap-4 pt-8">
-        <button className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg shadow-blue-200">
+        <button
+          onClick={() => {
+            setIsAddOpen(true);
+            setIsRemoveMode(false);
+          }}
+          className={`flex items-center gap-2 px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg ${
+            isRemoveMode
+              ? "bg-gray-300 text-gray-500"
+              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
+          }`}
+        >
           Add
         </button>
-        <button className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg shadow-red-200">
-          Remove
+
+        <button
+          onClick={() => setIsRemoveMode(!isRemoveMode)}
+          className={`flex items-center gap-2 px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg ${
+            isRemoveMode
+              ? "bg-gray-800 text-white ring-2 ring-red-500 shadow-gray-400"
+              : "bg-red-600 hover:bg-red-700 text-white shadow-red-200"
+          }`}
+        >
+          {isRemoveMode ? "Cancel Remove" : "Remove"}
         </button>
       </div>
 
       {selectedCar && (
-        <CarDetail car={selectedCar} onClose={() => setSelectedCar(null)} />
+        <CarDetail
+          car={selectedCar}
+          onClose={() => setSelectedCar(null)}
+          onUpdate={handleUpdateCar}
+        />
+      )}
+
+      {isAddOpen && (
+        <AddCar onClose={() => setIsAddOpen(false)} onAddCar={handleAddCar} />
+      )}
+
+      {carToDelete && (
+        <RemoveCar
+          onClose={() => setCarToDelete(null)}
+          onConfirm={handleConfirmDelete}
+        />
       )}
     </div>
   );
