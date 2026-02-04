@@ -1,94 +1,147 @@
-import Link from "next/link";
-import { Mail, Lock } from "lucide-react";
+"use client";
+
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
+import { Mail, Lock, Loader2, AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({ email: "", password: "" });
+  const [status, setStatus] = useState({ loading: false, error: "" });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setStatus({ loading: true, error: "" });
+
+    try {
+      const response = await fetch(
+        "http://rentoka.olifemassage.com/api/login",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(formData),
+        },
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || "Invalid credentials");
+      }
+
+      localStorage.setItem("rentoka_token", result.token);
+      router.push("/dashboard");
+    } catch (err: any) {
+      setStatus({ loading: false, error: err.message });
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
-      <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-xl border border-gray-200">
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex items-center gap-1">
-            <span className="text-4xl font-extrabold tracking-tighter text-black">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+        <div className="flex flex-col items-center mb-10">
+          <div className="flex items-center gap-2">
+            <span className="text-5xl font-black tracking-tighter text-black">
               RK
             </span>
-            <div className="flex flex-col">
-              <span className="text-2xl font-bold tracking-widest uppercase leading-none text-black">
+            <div className="flex flex-col border-l-2 border-black pl-2">
+              <span className="text-2xl font-bold tracking-[0.2em] uppercase leading-tight text-black">
                 Rentoka
               </span>
-              <div className="bg-black text-white text-[10px] text-center leading-none py-0.5 px-1 mt-0.5">
+              <div className="bg-black text-white text-[9px] font-medium text-center py-0.5 px-1 tracking-widest uppercase">
                 レントカー
               </div>
             </div>
           </div>
-          <p className="text-sm font-semibold text-gray-500 mt-2">
+          <p className="text-xs font-bold text-gray-400 mt-3 tracking-widest uppercase">
             Admin Dashboard Penyedia
           </p>
         </div>
 
-        <h2 className="text-3xl font-bold text-black mb-6">Sign In</h2>
+        <div className="mb-8">
+          <h2 className="text-2xl font-extrabold text-gray-900">Sign In</h2>
+          <p className="text-sm text-gray-500">
+            Access your provider management panel.
+          </p>
+        </div>
 
-        <form className="space-y-5">
-          <div>
-            <label className="block text-sm font-bold text-gray-900 mb-1">
+        {status.error && (
+          <div className="mb-6 flex items-center gap-3 p-4 text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <span className="font-semibold">{status.error}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700 ml-1">
               Email
             </label>
-            <div className="relative">
+            <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
+                <Mail className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
               </div>
               <input
+                name="email"
                 type="email"
-                placeholder="unknown@gmail.com"
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400 transition"
+                required
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="admin@rentoka.com"
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-900"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-bold text-gray-900 mb-1">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-gray-700 ml-1">
               Password
             </label>
-            <div className="relative">
+            <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Lock className="h-5 w-5 text-gray-400" />
+                <Lock className="h-5 w-5 text-gray-400 group-focus-within:text-black transition-colors" />
               </div>
               <input
+                name="password"
                 type="password"
-                placeholder="**********"
-                className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-gray-900 placeholder-gray-400 transition"
+                required
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-900"
               />
             </div>
           </div>
 
-          <div className="flex items-center">
-            <input
-              id="remember-me"
-              type="checkbox"
-              className="h-4 w-4 text-black border-gray-300 rounded focus:ring-black"
-            />
-            <label
-              htmlFor="remember-me"
-              className="ml-2 block text-sm font-bold text-gray-900"
-            >
-              Remember me
-            </label>
-          </div>
-
-          <Link
-            href="/dashboard"
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-black hover:bg-gray-800 transition transform active:scale-95"
+          <button
+            type="submit"
+            disabled={status.loading}
+            className="w-full flex items-center justify-center py-4 bg-black text-white rounded-xl font-bold text-sm shadow-lg hover:bg-gray-800 active:scale-[0.98] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
-            Sign In
-          </Link>
-
-          <div className="text-left">
-            <Link
-              href="#"
-              className="text-xs font-bold text-black hover:underline"
-            >
-              Forgot Password
-            </Link>
-          </div>
+            {status.loading ? (
+              <Loader2 className="animate-spin h-5 w-5" />
+            ) : (
+              "SIGN IN TO SYSTEM"
+            )}
+          </button>
         </form>
+
+        <div className="mt-8 text-center">
+          <button
+            type="button"
+            className="text-xs font-bold text-gray-400 hover:text-black transition-colors"
+          >
+            Forgot Password?
+          </button>
+        </div>
       </div>
     </div>
   );
