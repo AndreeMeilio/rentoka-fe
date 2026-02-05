@@ -80,7 +80,7 @@ export default function LoginPage() {
         <div className="mb-8">
           <h2 className="text-2xl font-extrabold text-gray-900">Sign In</h2>
           <p className="text-sm text-gray-500">
-            Access your provider management panel.
+            Access your management apps by Rentoka Products.
           </p>
         </div>
 
@@ -140,7 +140,7 @@ export default function LoginPage() {
             {status.loading ? (
               <Loader2 className="animate-spin h-5 w-5" />
             ) : (
-              "SIGN IN TO SYSTEM"
+              "SIGN IN TO RENTOKA APPS"
             )}
           </button>
         </form>
