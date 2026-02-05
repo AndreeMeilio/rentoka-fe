@@ -20,7 +20,7 @@ export default function LoginPage() {
 
     try {
       const response = await fetch(
-        "http://rentoka.olifemassage.com/api/login",
+        "https://rentoka.olifemassage.com/api/login",
         {
           method: "POST",
           headers: {
@@ -37,8 +37,19 @@ export default function LoginPage() {
         throw new Error(result.message || "Invalid credentials");
       }
 
-      localStorage.setItem("rentoka_token", result.token);
-      router.push("/dashboard");
+      // DISINKRONKAN: Menggunakan kunci "token" untuk seluruh sistem
+      localStorage.setItem("token", result.token);
+
+      // Opsional: Menyimpan data profil provider
+      if (result.data?.provider) {
+        localStorage.setItem(
+          "provider_info",
+          JSON.stringify(result.data.provider),
+        );
+      }
+
+      // Navigasi ke dashboard cars
+      router.push("/dashboard/cars");
     } catch (err: any) {
       setStatus({ loading: false, error: err.message });
     }
@@ -96,7 +107,7 @@ export default function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="admin@rentoka.com"
-                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-900"
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all"
               />
             </div>
           </div>
@@ -116,7 +127,7 @@ export default function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-900"
+                className="w-full pl-10 pr-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-black outline-none transition-all"
               />
             </div>
           </div>
@@ -124,7 +135,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={status.loading}
-            className="w-full flex items-center justify-center py-4 bg-black text-white rounded-xl font-bold text-sm shadow-lg hover:bg-gray-800 active:scale-[0.98] transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center py-4 bg-black text-white rounded-xl font-bold text-sm shadow-lg hover:bg-gray-800 active:scale-[0.98] transition-all disabled:bg-gray-400"
           >
             {status.loading ? (
               <Loader2 className="animate-spin h-5 w-5" />
@@ -133,15 +144,6 @@ export default function LoginPage() {
             )}
           </button>
         </form>
-
-        <div className="mt-8 text-center">
-          <button
-            type="button"
-            className="text-xs font-bold text-gray-400 hover:text-black transition-colors"
-          >
-            Forgot Password?
-          </button>
-        </div>
       </div>
     </div>
   );

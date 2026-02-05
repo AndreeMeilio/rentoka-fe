@@ -1,58 +1,63 @@
-import { Car, X, Pencil, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+"use client";
 
-export interface CarData {
-  id: number;
-  name: string;
-  merk: string;
-  plat: string;
-  year: string;
-  status: string;
-  price: string;
-  imageColor: string;
-  image?: string;
-}
+import { Car as CarIcon, X, Pencil, Check, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Car } from "./page";
 
 interface CarDetailProps {
-  car: CarData;
+  car: Car;
   onClose: () => void;
-
-  onUpdate: (updatedCar: CarData) => void;
+  onUpdate: (updatedCar: Car) => void;
 }
 
 export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
-  const [formData, setFormData] = useState<CarData>(car);
-
-  const [editingField, setEditingField] = useState<keyof CarData | null>(null);
+  const [formData, setFormData] = useState<Car>(car);
+  const [editingField, setEditingField] = useState<keyof Car | null>(null);
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
-    setFormData(car);
-  }, [car]);
-
-  const handleChange = (field: keyof CarData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-  };
+    const fetchDetail = async () => {
+      try {
+        setIsFetching(true);
+        const res = await fetch(
+          `https://rentoka.olifemassage.com/api/provider/vehicle?id_vehicle=${car.id}`,
+        );
+        const result = await res.json();
+        if (result.data) {
+          const detail = Array.isArray(result.data)
+            ? result.data[0]
+            : result.data;
+          setFormData({
+            id: detail.id_vehicle,
+            name: detail.vehicle_name || "",
+            merk: detail.brand || "",
+            plat: detail.police_number || "",
+            year: detail.year?.toString() || "",
+            status: detail.vehicle_status || "AVAILABLE",
+            price: detail.rental_price?.toString() || "0",
+            imageColor: car.imageColor,
+            image:
+              detail.image_path ||
+              "https://rentoka.olifemassage.com/api/uploads/vehicle-1770178681.jpeg",
+          });
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsFetching(false);
+      }
+    };
+    fetchDetail();
+  }, [car.id, car.imageColor]);
 
   const handleSave = () => {
     onUpdate(formData);
     setEditingField(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleSave();
-    } else if (e.key === "Escape") {
-      setEditingField(null);
-      setFormData(car);
-    }
-  };
-
-  const renderField = (
-    label: string,
-    fieldKey: keyof CarData,
-    type: "text" | "number" = "text",
-  ) => {
+  const renderField = (label: string, fieldKey: keyof Car, type = "text") => {
     const isEditing = editingField === fieldKey;
+    const value = formData[fieldKey]?.toString() || "";
 
     return (
       <div
@@ -60,16 +65,17 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
         onClick={() => !isEditing && setEditingField(fieldKey)}
       >
         <p className="text-[10px] font-bold text-gray-400 mb-1">{label}</p>
-
         {isEditing ? (
           <div className="flex items-center">
             <input
               autoFocus
               type={type}
-              value={formData[fieldKey] as string}
-              onChange={(e) => handleChange(fieldKey, e.target.value)}
+              value={value}
+              onChange={(e) =>
+                setFormData({ ...formData, [fieldKey]: e.target.value })
+              }
               onBlur={handleSave}
-              onKeyDown={handleKeyDown}
+              onKeyDown={(e) => e.key === "Enter" && handleSave()}
               className="w-full bg-transparent border-none outline-none text-sm font-bold text-gray-900 p-0"
             />
             <button onMouseDown={handleSave} className="ml-2 text-green-600">
@@ -79,13 +85,15 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
         ) : (
           <>
             <p className="text-sm font-bold text-gray-900 truncate">
-              {formData[fieldKey]}
-              {fieldKey === "price" &&
-                !formData[fieldKey].toString().includes("/hari") && (
-                  <span className="font-normal text-xs text-gray-500">
-                    /hari
-                  </span>
-                )}
+              {fieldKey === "price"
+                ? `Rp ${new Intl.NumberFormat("id-ID").format(parseInt(value || "0"))}`
+                : value}
+              {fieldKey === "price" && (
+                <span className="font-normal text-xs text-gray-500">
+                  {" "}
+                  /hari
+                </span>
+              )}
             </p>
             <Pencil
               size={12}
@@ -98,8 +106,8 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative max-h-[90vh] md:h-auto overflow-y-auto">
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-white/50 hover:bg-gray-100 rounded-full transition"
@@ -108,94 +116,54 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
         </button>
 
         <div className="w-full md:w-1/2 p-8 border-r border-gray-100">
-          <h2 className="text-3xl font-light text-gray-400 mb-8 border-b border-gray-100 pb-4">
+          <h2 className="text-3xl font-light text-gray-400 mb-8 border-b pb-4">
             Car Detail
           </h2>
-
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              {renderField("Nama Mobil", "name")}
-              {renderField("Merk", "merk")}
+          {isFetching ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="animate-spin text-blue-500" />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {renderField("Plat Polisi", "plat")}
-              {renderField("Tahun Keluaran", "year", "number")}
-            </div>
-
-            <div className="bg-gray-100 p-3 rounded-xl group relative">
-              <p className="text-[10px] font-bold text-gray-400 mb-2">
-                Status Sewa
-              </p>
-              <div className="flex items-center gap-2">
-                <div
-                  className={`w-2 h-2 rounded-full ${formData.status.toLowerCase().includes("tersedia") ? "bg-green-500" : "bg-blue-600"}`}
-                ></div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                {renderField("Nama Mobil", "name")}
+                {renderField("Merk", "merk")}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {renderField("Plat Polisi", "plat")}
+                {renderField("Tahun Keluaran", "year", "number")}
+              </div>
+              <div className="bg-gray-100 p-3 rounded-xl">
+                <p className="text-[10px] font-bold text-gray-400 mb-2">
+                  Status Sewa
+                </p>
                 <select
                   value={formData.status}
-                  onChange={(e) => handleChange("status", e.target.value)}
-                  className="bg-transparent text-sm font-bold text-gray-900 outline-none cursor-pointer appearance-none w-full"
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
+                  className="bg-transparent text-sm font-bold text-gray-900 outline-none w-full cursor-pointer uppercase"
                 >
-                  <option value="Status: tersedia">Tersedia</option>
-                  <option value="Status: disewa">Disewa</option>
-                  <option value="Status: sedang disewakan">
-                    Sedang Disewakan
-                  </option>
+                  <option value="AVAILABLE">Available</option>
+                  <option value="RENTED">Rented</option>
                 </select>
-                <Pencil
-                  size={12}
-                  className="text-gray-400 opacity-0 group-hover:opacity-100 transition"
-                />
               </div>
+              {renderField("Harga Sewa", "price", "number")}
             </div>
-
-            <div
-              className={`p-3 rounded-xl relative group transition ${editingField === "price" ? "bg-white ring-2 ring-blue-500 shadow-md" : "bg-gray-100 hover:bg-gray-200 cursor-pointer"}`}
-              onClick={() =>
-                editingField !== "price" && setEditingField("price")
-              }
-            >
-              <p className="text-[10px] font-bold text-gray-400 mb-1">
-                Harga Sewa
-              </p>
-              {editingField === "price" ? (
-                <input
-                  autoFocus
-                  value={formData.price}
-                  onChange={(e) => handleChange("price", e.target.value)}
-                  onBlur={handleSave}
-                  onKeyDown={handleKeyDown}
-                  className="w-full bg-transparent border-none outline-none text-lg font-bold text-gray-900"
-                />
-              ) : (
-                <p className="text-lg font-bold text-gray-900">
-                  {formData.price}
-                  {!formData.price.toString().includes("hari") && (
-                    <span className="text-xs text-gray-400 font-normal">
-                      /hari
-                    </span>
-                  )}
-                </p>
-              )}
-              <Pencil
-                size={14}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 opacity-0 group-hover:opacity-100 transition"
-              />
-            </div>
-          </div>
+          )}
         </div>
 
         <div
-          className={`w-full md:w-1/2 ${car.imageColor || "bg-blue-50"} flex items-center justify-center p-12 relative`}
+          className={`w-full md:w-1/2 ${car.imageColor} flex items-center justify-center p-12 overflow-hidden bg-gray-50`}
         >
-          {car.image ? (
+          {formData.image ? (
             <img
-              src={car.image}
-              alt={car.name}
-              className="w-full object-contain drop-shadow-2xl"
+              src={formData.image}
+              alt={formData.name}
+              className="w-full h-full object-contain drop-shadow-2xl"
             />
           ) : (
-            <Car size={200} className="text-gray-900/10 drop-shadow-xl" />
+            <CarIcon size={200} className="text-gray-900/10" />
           )}
         </div>
       </div>

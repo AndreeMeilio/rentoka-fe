@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Search, Minus } from "lucide-react";
-
+import { useState, useEffect, useCallback } from "react";
+import { Search, Minus, Loader2 } from "lucide-react";
 import CarCard from "./CarCard";
 import CarDetail from "./CarDetail";
 import AddCar from "./ButtonAddCar";
@@ -21,88 +20,89 @@ export interface Car {
 }
 
 export default function CarsPage() {
+  const [cars, setCars] = useState<Car[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
-
   const [isRemoveMode, setIsRemoveMode] = useState(false);
   const [carToDelete, setCarToDelete] = useState<Car | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const [cars, setCars] = useState<Car[]>([
-    {
-      id: 1,
-      name: "Toyota Agya",
-      merk: "Toyota",
-      plat: "D 1231 BDG",
-      year: "2017",
-      status: "Status: disewa",
-      price: "Rp 200.000",
-      imageColor: "bg-blue-100",
-      image: "",
-    },
-    {
-      id: 2,
-      name: "Toyota Sprinter",
-      merk: "Toyota",
-      plat: "B 8686 AE",
-      year: "1986",
-      status: "Status: tersedia",
-      price: "Rp 150.000",
-      imageColor: "bg-gray-100",
-      image: "",
-    },
-    {
-      id: 3,
-      name: "Honda Civic",
-      merk: "Honda",
-      plat: "B 1234 CD",
-      year: "2022",
-      status: "Status: sedang disewakan",
-      price: "Rp 220.000",
-      imageColor: "bg-red-100",
-      image: "",
-    },
-    {
-      id: 4,
-      name: "Suzuki Ertiga",
-      merk: "Suzuki",
-      plat: "F 5678 GH",
-      year: "2019",
-      status: "Status: sedang disewakan",
-      price: "Rp 250.000",
-      imageColor: "bg-orange-100",
-      image: "",
-    },
-  ]);
+  const fetchCars = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        "https://rentoka.olifemassage.com/api/provider/vehicle",
+      );
+      const result = await response.json();
 
-  const handleAddCar = (
-    newCarData: Omit<Car, "id" | "status" | "imageColor">,
-  ) => {
-    const newCar: Car = {
-      id: Date.now(),
-      status: "Status: Tersedia",
-      imageColor: "bg-gray-100",
-      ...newCarData,
-    };
-    setCars((prevCars) => [...prevCars, newCar]);
-    setIsAddOpen(false);
+      const mappedCars = result.data.map((item: any) => ({
+        id: item.id_vehicle,
+        name: item.vehicle_name || "Unknown",
+        merk: item.brand || "-",
+        plat: item.police_number || "-",
+        year: item.year?.toString() || "-",
+        status: item.vehicle_status || "AVAILABLE",
+        price: item.rental_price?.toString() || "0",
+        imageColor: "bg-gray-100",
+        image:
+          item.image_path ||
+          "https://rentoka.olifemassage.com/api/uploads/vehicle-1770178681.jpeg",
+      }));
+
+      setCars(mappedCars);
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCars();
+  }, [fetchCars]);
+
+  const handleUpdateCar = async (updatedCar: Car) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `https://rentoka.olifemassage.com/api/provider/vehicle/update`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            id_vehicle: updatedCar.id,
+            vehicle_name: updatedCar.name,
+            brand: updatedCar.merk,
+            police_number: updatedCar.plat,
+            year: parseInt(updatedCar.year),
+            rental_price: parseFloat(updatedCar.price),
+            vehicle_status: updatedCar.status.toUpperCase(),
+          }),
+        },
+      );
+
+      if (response.ok) {
+        fetchCars();
+        setSelectedCar(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
-
-  const formatPrice = (price: string) => {
-    return price.toString().startsWith("Rp") ? price : `Rp ${price}/hari`;
-  };
-
-  const handleUpdateCar = (updateCar: Car) => {
-    setCars((prevCars) =>
-      prevCars.map((car) => (car.id === updateCar.id ? updateCar : car)),
-    );
-  };
-
   const handleConfirmDelete = () => {
     if (carToDelete) {
-      setCars((prevCars) => prevCars.filter((c) => c.id !== carToDelete.id));
+      setCars((prev) => prev.filter((c) => c.id !== carToDelete.id));
       setCarToDelete(null);
     }
   };
+
+  const filteredCars = cars.filter((car) =>
+    car.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   return (
     <div className="space-y-8">
@@ -112,7 +112,7 @@ export default function CarsPage() {
             Add or Remove Your Cars
           </h2>
           <p className="text-gray-500 text-sm mt-1">
-            Tambah atau kurangi ketersediaan mobilmu
+            Kelola sewa rentoka mobil Anda
           </p>
         </div>
 
@@ -122,38 +122,49 @@ export default function CarsPage() {
           </div>
           <input
             type="text"
-            placeholder="Cari mobil di sini..."
+            placeholder="Cari mobil..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-black transition shadow-sm"
           />
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {cars.map((car) => (
-          <div key={car.id} className="relative group">
-            <CarCard
-              name={car.name}
-              status={car.status}
-              price={formatPrice(car.price)}
-              imageColor={car.imageColor}
-              onClick={() => !isRemoveMode && setSelectedCar(car)}
-            />
-
-            {isRemoveMode && (
-              <button
-                onClick={() => setCarToDelete(car)}
-                className="absolute -top-3 -right-3 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 hover:scale-110 transition-all animate-in zoom-in duration-200 z-10"
-              >
-                <Minus size={20} strokeWidth={3} />
-              </button>
-            )}
-
-            {isRemoveMode && (
-              <div className="absolute inset-0 bg-white/10 rounded-2xl pointer-events-none border-2 border-red-200 border-dashed animate-pulse"></div>
-            )}
-          </div>
-        ))}
-      </div>
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <Loader2 className="animate-spin text-blue-600" size={40} />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filteredCars.map((car) => (
+            <div key={car.id} className="relative group">
+              <CarCard
+                name={car.name}
+                status={car.status}
+                price={
+                  car.price.startsWith("Rp")
+                    ? car.price
+                    : `Rp ${new Intl.NumberFormat("id-ID").format(parseInt(car.price))}`
+                }
+                imageColor={car.imageColor}
+                image={car.image}
+                onClick={() => !isRemoveMode && setSelectedCar(car)}
+              />
+              {isRemoveMode && (
+                <>
+                  <button
+                    onClick={() => setCarToDelete(car)}
+                    className="absolute -top-3 -right-3 bg-red-600 text-white p-2 rounded-full shadow-lg hover:bg-red-700 hover:scale-110 transition-all z-20"
+                  >
+                    <Minus size={20} strokeWidth={3} />
+                  </button>
+                  <div className="absolute inset-0 bg-white/10 rounded-2xl pointer-events-none border-2 border-red-200 border-dashed animate-pulse"></div>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex justify-center gap-4 pt-8">
         <button
@@ -161,22 +172,13 @@ export default function CarsPage() {
             setIsAddOpen(true);
             setIsRemoveMode(false);
           }}
-          className={`flex items-center gap-2 px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg ${
-            isRemoveMode
-              ? "bg-gray-300 text-gray-500"
-              : "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200"
-          }`}
+          className={`px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg ${isRemoveMode ? "bg-gray-300 text-gray-500" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
         >
           Add
         </button>
-
         <button
           onClick={() => setIsRemoveMode(!isRemoveMode)}
-          className={`flex items-center gap-2 px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg ${
-            isRemoveMode
-              ? "bg-gray-800 text-white ring-2 ring-red-500 shadow-gray-400"
-              : "bg-red-600 hover:bg-red-700 text-white shadow-red-200"
-          }`}
+          className={`px-8 py-3 rounded-lg text-lg font-medium transition shadow-lg ${isRemoveMode ? "bg-gray-800 text-white ring-2 ring-red-500" : "bg-red-600 hover:bg-red-700 text-white"}`}
         >
           {isRemoveMode ? "Cancel Remove" : "Remove"}
         </button>
@@ -189,13 +191,13 @@ export default function CarsPage() {
           onUpdate={handleUpdateCar}
         />
       )}
-
       {isAddOpen && (
-        <AddCar onClose={() => setIsAddOpen(false)} onAddCar={handleAddCar} />
+        <AddCar onClose={() => setIsAddOpen(false)} onAddCar={fetchCars} />
       )}
 
       {carToDelete && (
         <RemoveCar
+          id_vehicle={carToDelete.id}
           onClose={() => setCarToDelete(null)}
           onConfirm={handleConfirmDelete}
         />

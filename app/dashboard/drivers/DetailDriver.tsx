@@ -38,7 +38,7 @@ export default function DetailDriver({ driver, onClose }: DetailDriverProps) {
               </h2>
               <div className="flex items-center gap-2 text-green-600 font-black text-[10px] uppercase tracking-[0.2em]">
                 <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
-                Verified Customer
+                KONSUMEN TERVERIFIKASI
               </div>
             </div>
           </div>

@@ -1,4 +1,14 @@
-import { ChevronLeft, Plus, X, UploadCloud, Info, Check } from "lucide-react";
+"use client";
+
+import {
+  ChevronLeft,
+  Plus,
+  X,
+  UploadCloud,
+  Info,
+  Check,
+  Loader2,
+} from "lucide-react";
 import { useState, useRef, DragEvent } from "react";
 
 interface CarData {
@@ -12,7 +22,7 @@ interface CarData {
 
 interface AddCarProps {
   onClose: () => void;
-  onAddCar: (car: CarData) => void;
+  onAddCar: () => void;
 }
 
 const INPUT_FIELDS = [
@@ -54,6 +64,7 @@ export default function AddCar({ onClose, onAddCar }: AddCarProps) {
 
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [errors, setErrors] = useState<Partial<CarData>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -116,22 +127,58 @@ export default function AddCar({ onClose, onAddCar }: AddCarProps) {
     });
 
     setErrors(newErrors);
+    if (isValid) setShowConfirmation(true);
+  };
 
-    if (isValid) {
-      setShowConfirmation(true);
+  const handleConfirm = async () => {
+    try {
+      setIsSubmitting(true);
+      const token = localStorage.getItem("token");
+
+      const payload = {
+        vehicle_name: formData.name,
+        brand: formData.merk,
+        year: parseInt(formData.year),
+        police_number: formData.plat,
+        rental_price: parseFloat(formData.price),
+        vehicle_status: "AVAILABLE",
+        image_path:
+          "https://rentoka.olifemassage.com/api/uploads/vehicle-1770178681.jpeg", // Default image jika upload belum aktif di BE
+      };
+
+      const response = await fetch(
+        "https://rentoka.olifemassage.com/api/provider/vehicle",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setShowConfirmation(false);
+        setShowSuccess(true);
+      } else {
+        console.error("Server Error:", result);
+        alert(`Gagal: ${result.message || "Cek kembali data Anda"}`);
+      }
+    } catch (error) {
+      console.error("Network Error:", error);
+      alert("Gagal terhubung ke server.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleConfirm = () => {
-    setShowConfirmation(false);
-    setShowSuccess(true);
-  };
-
   const handleFinish = () => {
-    onAddCar({
-      ...formData,
-      image: previewImage || undefined,
-    });
+    onAddCar();
+    onClose();
   };
 
   return (
@@ -247,9 +294,6 @@ export default function AddCar({ onClose, onAddCar }: AddCarProps) {
                           ? "Lepaskan gambar..."
                           : "Klik untuk upload"}
                       </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        atau drag & drop gambar kesini
-                      </p>
                     </div>
                   )}
                 </div>
@@ -266,7 +310,7 @@ export default function AddCar({ onClose, onAddCar }: AddCarProps) {
             </button>
             <button
               onClick={handleInitialSubmit}
-              className="bg-black hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl text-sm transition-all shadow-lg shadow-gray-200 hover:shadow-xl active:scale-95 flex items-center gap-2"
+              className="bg-black hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2"
             >
               Tambahkan Kendaraan
             </button>
@@ -278,30 +322,28 @@ export default function AddCar({ onClose, onAddCar }: AddCarProps) {
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
           <div
             className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => setShowConfirmation(false)}
+            onClick={() => !isSubmitting && setShowConfirmation(false)}
           ></div>
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden flex flex-col items-center text-center p-8 border-t-4 border-blue-500">
-            <button
-              onClick={() => setShowConfirmation(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-black transition"
-            >
-              <X size={24} />
-            </button>
-            <div className="w-20 h-20 rounded-full bg-white border-4 border-black flex items-center justify-center mb-6">
-              <Info size={40} className="text-black" strokeWidth={2.5} />
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 p-8 text-center border-t-4 border-blue-500">
+            <div className="w-20 h-20 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-6">
+              {isSubmitting ? (
+                <Loader2 className="animate-spin" size={40} />
+              ) : (
+                <Info size={40} />
+              )}
             </div>
-            <h3 className="text-2xl font-bold text-black mb-3">
-              Apakah sudah benar?
-            </h3>
-            <p className="text-gray-500 text-sm leading-relaxed mb-8 px-2">
-              Kami mohon kepada para penyedia untuk lebih teliti dalam mengisi
-              data kendaraan yang akan disewakan.
+            <h3 className="text-2xl font-bold mb-3">Apakah sudah benar?</h3>
+            <p className="text-gray-500 text-sm mb-8 px-2">
+              Pastikan data kendaraan yang Anda masukkan sudah akurat.
             </p>
             <button
+              disabled={isSubmitting}
               onClick={handleConfirm}
-              className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95"
+              className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95 disabled:bg-gray-400"
             >
-              Ya, data sudah diisi dengan benar
+              {isSubmitting
+                ? "Sedang Menyimpan..."
+                : "Ya, data sudah diisi dengan benar"}
             </button>
           </div>
         </div>
@@ -310,20 +352,14 @@ export default function AddCar({ onClose, onAddCar }: AddCarProps) {
       {showSuccess && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 overflow-hidden flex flex-col items-center text-center p-8">
-            <div className="w-20 h-20 rounded-full bg-white border-4 border-black flex items-center justify-center mb-6 animate-in zoom-in duration-300">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 p-8 text-center">
+            <div className="w-20 h-20 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-300">
               <Check size={40} className="text-black" strokeWidth={3} />
             </div>
-
-            <h3 className="text-2xl font-bold text-black mb-3">
-              Kendaraan telah ditambahkan
-            </h3>
-
-            <p className="text-gray-500 text-sm leading-relaxed mb-8 px-4">
-              Kendaraan berhasil ditambahkan! Tinjau kendaraan sewamu sekarang
-              juga.
+            <h3 className="text-2xl font-bold mb-3">Berhasil Ditambahkan</h3>
+            <p className="text-gray-500 text-sm mb-8 px-4">
+              Kendaraan Anda kini sudah terdaftar di sistem Rentoka.
             </p>
-
             <button
               onClick={handleFinish}
               className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95"
