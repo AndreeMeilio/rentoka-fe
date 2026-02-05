@@ -1,6 +1,6 @@
 "use client";
 
-import { Car as CarIcon, X, Pencil, Check, Loader2 } from "lucide-react";
+import { X, Pencil, Check, Loader2, Car as CarIcon } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Car } from "./page";
 
@@ -35,6 +35,8 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
             year: detail.year?.toString() || "",
             status: detail.vehicle_status || "AVAILABLE",
             price: detail.rental_price?.toString() || "0",
+            lat: detail.vehicle_location_lat?.toString() || "0",
+            lng: detail.vehicle_location_long?.toString() || "0",
             imageColor: car.imageColor,
             image:
               detail.image_path ||
@@ -70,6 +72,7 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
             <input
               autoFocus
               type={type}
+              step="any"
               value={value}
               onChange={(e) =>
                 setFormData({ ...formData, [fieldKey]: e.target.value })
@@ -88,12 +91,6 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
               {fieldKey === "price"
                 ? `Rp ${new Intl.NumberFormat("id-ID").format(parseInt(value || "0"))}`
                 : value}
-              {fieldKey === "price" && (
-                <span className="font-normal text-xs text-gray-500">
-                  {" "}
-                  /hari
-                </span>
-              )}
             </p>
             <Pencil
               size={12}
@@ -112,37 +109,41 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
           onClick={onClose}
           className="absolute top-4 right-4 z-10 p-2 bg-white/50 hover:bg-gray-100 rounded-full transition"
         >
-          <X size={24} className="text-gray-600" />
+          <X size={24} />
         </button>
 
         <div className="w-full md:w-1/2 p-8 border-r border-gray-100">
-          <h2 className="text-3xl font-light text-gray-400 mb-8 border-b pb-4">
-            Car Detail
+          <h2 className="text-2xl font-bold mb-8 border-b pb-4">
+            Vehicle Detail
           </h2>
           {isFetching ? (
             <div className="flex justify-center py-10">
-              <Loader2 className="animate-spin text-blue-500" />
+              <Loader2 className="animate-spin" />
             </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {renderField("Nama Mobil", "name")}
+                {renderField("Nama", "name")}
                 {renderField("Merk", "merk")}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {renderField("Plat Polisi", "plat")}
-                {renderField("Tahun Keluaran", "year", "number")}
+                {renderField("Plat", "plat")}
+                {renderField("Tahun", "year", "number")}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {renderField("Latitude", "lat", "number")}
+                {renderField("Longitude", "lng", "number")}
               </div>
               <div className="bg-gray-100 p-3 rounded-xl">
                 <p className="text-[10px] font-bold text-gray-400 mb-2">
-                  Status Sewa
+                  Status
                 </p>
                 <select
                   value={formData.status}
                   onChange={(e) =>
                     setFormData({ ...formData, status: e.target.value })
                   }
-                  className="bg-transparent text-sm font-bold text-gray-900 outline-none w-full cursor-pointer uppercase"
+                  className="bg-transparent text-sm font-bold text-gray-900 outline-none w-full"
                 >
                   <option value="AVAILABLE">Available</option>
                   <option value="RENTED">Rented</option>
@@ -153,9 +154,7 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
           )}
         </div>
 
-        <div
-          className={`w-full md:w-1/2 ${car.imageColor} flex items-center justify-center p-12 overflow-hidden bg-gray-50`}
-        >
+        <div className="w-full md:w-1/2 flex items-center justify-center p-12 bg-gray-50">
           {formData.image ? (
             <img
               src={formData.image}
@@ -163,7 +162,7 @@ export default function CarDetail({ car, onClose, onUpdate }: CarDetailProps) {
               className="w-full h-full object-contain drop-shadow-2xl"
             />
           ) : (
-            <CarIcon size={200} className="text-gray-900/10" />
+            <CarIcon size={150} className="text-gray-200" />
           )}
         </div>
       </div>

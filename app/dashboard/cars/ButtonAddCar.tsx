@@ -1,374 +1,214 @@
 "use client";
 
-import {
-  ChevronLeft,
-  Plus,
-  X,
-  UploadCloud,
-  Info,
-  Check,
-  Loader2,
-} from "lucide-react";
-import { useState, useRef, DragEvent } from "react";
-
-interface CarData {
-  name: string;
-  merk: string;
-  plat: string;
-  year: string;
-  price: string;
-  image?: string;
-}
+import { ChevronLeft, X, Info, Check, Loader2 } from "lucide-react";
+import { useState } from "react";
 
 interface AddCarProps {
   onClose: () => void;
   onAddCar: () => void;
 }
 
-const INPUT_FIELDS = [
-  {
-    name: "name",
-    label: "Nama Kendaraan",
-    placeholder: "Contoh: Toyota Avanza",
-    type: "text",
-  },
-  { name: "merk", label: "Merk", placeholder: "Contoh: Toyota", type: "text" },
-  {
-    name: "year",
-    label: "Tahun Keluaran",
-    placeholder: "Contoh: 2023",
-    type: "number",
-  },
-  {
-    name: "plat",
-    label: "Nomor Polisi",
-    placeholder: "Contoh: B 1234 CD",
-    type: "text",
-  },
-  {
-    name: "price",
-    label: "Harga Sewa (per hari)",
-    placeholder: "Contoh: 200000",
-    type: "number",
-  },
-];
-
 export default function AddCar({ onClose, onAddCar }: AddCarProps) {
-  const [formData, setFormData] = useState<CarData>({
+  const [formData, setFormData] = useState({
     name: "",
     merk: "",
     year: "",
     plat: "",
     price: "",
+    lat: "",
+    lng: "",
   });
-
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-  const [errors, setErrors] = useState<Partial<CarData>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name as keyof CarData]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }));
-    }
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleFile = (file: File) => {
-    if (file && file.type.startsWith("image/")) {
-      const imageUrl = URL.createObjectURL(file);
-      setPreviewImage(imageUrl);
-    } else {
-      alert("Mohon upload file gambar yang valid!");
-    }
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-  };
-
-  const onDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-  const onDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-  const onDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleFile(file);
-  };
-
-  const removeImage = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPreviewImage(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleInitialSubmit = () => {
-    const newErrors: Partial<CarData> = {};
-    let isValid = true;
-
-    Object.keys(formData).forEach((key) => {
-      if (!formData[key as keyof CarData]) {
-        newErrors[key as keyof CarData] = "Field ini wajib diisi";
-        isValid = false;
-      }
-    });
-
-    setErrors(newErrors);
-    if (isValid) setShowConfirmation(true);
-  };
-
-  const handleConfirm = async () => {
+  const handleSubmit = async () => {
+    setLoading(true);
     try {
-      setIsSubmitting(true);
       const token = localStorage.getItem("token");
-
       const payload = {
         vehicle_name: formData.name,
         brand: formData.merk,
         year: parseInt(formData.year),
         police_number: formData.plat,
         rental_price: parseFloat(formData.price),
+        vehicle_location_lat: parseFloat(formData.lat),
+        vehicle_location_long: parseFloat(formData.lng),
         vehicle_status: "AVAILABLE",
         image_path:
-          "https://rentoka.olifemassage.com/api/uploads/vehicle-1770178681.jpeg", // Default image jika upload belum aktif di BE
+          "https://rentoka.olifemassage.com/api/uploads/vehicle-1770178681.jpeg",
       };
 
-      const response = await fetch(
+      const res = await fetch(
         "https://rentoka.olifemassage.com/api/provider/vehicle",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Accept: "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify(payload),
         },
       );
 
-      const result = await response.json();
-
-      if (response.ok) {
-        setShowConfirmation(false);
-        setShowSuccess(true);
-      } else {
-        console.error("Server Error:", result);
-        alert(`Gagal: ${result.message || "Cek kembali data Anda"}`);
-      }
-    } catch (error) {
-      console.error("Network Error:", error);
-      alert("Gagal terhubung ke server.");
+      if (res.ok) setStep(3);
+      else alert("Gagal menyimpan.");
+    } catch (err) {
+      alert("Kesalahan jaringan.");
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  const handleFinish = () => {
-    onAddCar();
-    onClose();
-  };
-
   return (
-    <>
-      <div className="fixed inset-0 bg-black/60 z-40 flex items-center justify-center p-4 backdrop-blur-md animate-in fade-in duration-200">
-        <div className="bg-white w-full max-w-5xl rounded-3xl shadow-2xl relative flex flex-col max-h-[90vh]">
-          <div className="p-6 md:p-8 border-b border-gray-100 flex items-center justify-between bg-white rounded-t-3xl z-10">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-              >
-                <ChevronLeft size={28} className="text-gray-700" />
-              </button>
-              <h2 className="text-2xl font-bold text-gray-900">Add New Car</h2>
-            </div>
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+      <div className="bg-white w-full max-w-4xl rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
+        <div className="p-6 border-b flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
+              className="p-2 hover:bg-gray-100 rounded-full transition"
             >
-              <X size={24} />
+              <ChevronLeft />
             </button>
+            <h2 className="text-xl font-bold">Add Car</h2>
           </div>
+          <X className="cursor-pointer text-gray-400" onClick={onClose} />
+        </div>
 
-          <div className="overflow-y-auto p-6 md:p-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {INPUT_FIELDS.map((field) => (
-                    <div
-                      key={field.name}
-                      className={field.name === "name" ? "md:col-span-2" : ""}
-                    >
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {field.label} <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        name={field.name}
-                        type={field.type}
-                        value={formData[field.name as keyof CarData]}
-                        onChange={handleChange}
-                        placeholder={field.placeholder}
-                        className={`w-full bg-gray-50 border ${
-                          errors[field.name as keyof CarData]
-                            ? "border-red-500 focus:ring-red-200"
-                            : "border-gray-200 focus:ring-black"
-                        } rounded-xl px-4 py-3.5 text-sm transition-all outline-none focus:ring-2 focus:bg-white`}
-                      />
-                      {errors[field.name as keyof CarData] && (
-                        <p className="text-red-500 text-xs mt-1 ml-1">
-                          {errors[field.name as keyof CarData]}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="lg:col-span-1">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Foto Kendaraan
-                </label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  accept="image/*"
-                />
-                <div
-                  onDragOver={onDragOver}
-                  onDragLeave={onDragLeave}
-                  onDrop={onDrop}
-                  onClick={() => !previewImage && fileInputRef.current?.click()}
-                  className={`group relative h-80 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center transition-all cursor-pointer overflow-hidden ${
-                    isDragging
-                      ? "border-blue-500 bg-blue-50"
-                      : previewImage
-                        ? "border-gray-200"
-                        : "border-gray-300 hover:border-black hover:bg-gray-50"
-                  }`}
-                >
-                  {previewImage ? (
-                    <>
-                      <img
-                        src={previewImage}
-                        alt="Preview"
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                        <button
-                          onClick={removeImage}
-                          className="bg-white/20 backdrop-blur-md border border-white/50 text-white px-4 py-2 rounded-lg font-medium hover:bg-red-500 hover:border-red-500 transition-colors flex items-center gap-2"
-                        >
-                          <X size={16} /> Hapus Foto
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-center p-6">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                        {isDragging ? (
-                          <UploadCloud size={32} className="text-blue-500" />
-                        ) : (
-                          <Plus
-                            size={32}
-                            className="text-gray-400 group-hover:text-black transition-colors"
-                          />
-                        )}
-                      </div>
-                      <p className="text-sm font-bold text-gray-900">
-                        {isDragging
-                          ? "Lepaskan gambar..."
-                          : "Klik untuk upload"}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+        <div className="overflow-y-auto p-8 grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="md:col-span-2">
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Nama Kendaraan
+            </label>
+            <input
+              name="name"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
           </div>
-
-          <div className="p-6 md:p-8 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-3xl">
-            <button
-              onClick={onClose}
-              className="px-6 py-3 rounded-xl text-sm font-bold text-gray-600 hover:bg-gray-200 transition-colors"
-            >
-              Batal
-            </button>
-            <button
-              onClick={handleInitialSubmit}
-              className="bg-black hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-xl text-sm transition-all shadow-lg active:scale-95 flex items-center gap-2"
-            >
-              Tambahkan Kendaraan
-            </button>
+          <div>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Merk
+            </label>
+            <input
+              name="merk"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
           </div>
+          <div>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Tahun
+            </label>
+            <input
+              name="year"
+              type="number"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Plat
+            </label>
+            <input
+              name="plat"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Harga / Hari
+            </label>
+            <input
+              name="price"
+              type="number"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Latitude
+            </label>
+            <input
+              name="lat"
+              type="number"
+              step="any"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase text-gray-400 mb-1 block">
+              Longitude
+            </label>
+            <input
+              name="lng"
+              type="number"
+              step="any"
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-50 border rounded-xl outline-none focus:ring-2 focus:ring-black"
+            />
+          </div>
+        </div>
+
+        <div className="p-6 bg-gray-50 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-6 py-3 font-bold text-gray-400"
+          >
+            Batal
+          </button>
+          <button
+            onClick={() => setStep(2)}
+            className="bg-black text-white px-8 py-3 rounded-xl font-bold active:scale-95 transition"
+          >
+            Tambah
+          </button>
         </div>
       </div>
 
-      {showConfirmation && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => !isSubmitting && setShowConfirmation(false)}
-          ></div>
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 p-8 text-center border-t-4 border-blue-500">
-            <div className="w-20 h-20 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-6">
-              {isSubmitting ? (
-                <Loader2 className="animate-spin" size={40} />
-              ) : (
-                <Info size={40} />
-              )}
+      {step === 2 && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl max-w-sm w-full text-center shadow-2xl">
+            <div className="w-16 h-16 border-4 border-black rounded-full flex items-center justify-center mx-auto mb-4">
+              {loading ? <Loader2 className="animate-spin" /> : <Info />}
             </div>
-            <h3 className="text-2xl font-bold mb-3">Apakah sudah benar?</h3>
-            <p className="text-gray-500 text-sm mb-8 px-2">
-              Pastikan data kendaraan yang Anda masukkan sudah akurat.
-            </p>
+            <h3 className="text-xl font-bold mb-6">Simpan Data?</h3>
             <button
-              disabled={isSubmitting}
-              onClick={handleConfirm}
-              className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95 disabled:bg-gray-400"
+              disabled={loading}
+              onClick={handleSubmit}
+              className="w-full bg-black text-white py-3 rounded-xl font-bold disabled:bg-gray-400"
             >
-              {isSubmitting
-                ? "Sedang Menyimpan..."
-                : "Ya, data sudah diisi dengan benar"}
+              {loading ? "Menyimpan..." : "Ya, Simpan"}
             </button>
           </div>
         </div>
       )}
 
-      {showSuccess && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 animate-in fade-in zoom-in duration-200">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm"></div>
-          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl relative z-10 p-8 text-center">
-            <div className="w-20 h-20 rounded-full border-4 border-black flex items-center justify-center mx-auto mb-6 animate-in zoom-in duration-300">
-              <Check size={40} className="text-black" strokeWidth={3} />
-            </div>
-            <h3 className="text-2xl font-bold mb-3">Berhasil Ditambahkan</h3>
-            <p className="text-gray-500 text-sm mb-8 px-4">
-              Kendaraan Anda kini sudah terdaftar di sistem Rentoka.
-            </p>
+      {step === 3 && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl max-w-sm w-full text-center shadow-2xl">
+            <Check size={50} className="mx-auto mb-4 text-green-500" />
+            <h3 className="text-xl font-bold mb-6">Berhasil Ditambah</h3>
             <button
-              onClick={handleFinish}
-              className="w-full bg-black hover:bg-gray-800 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg active:scale-95"
+              onClick={() => {
+                onAddCar();
+                onClose();
+              }}
+              className="w-full bg-black text-white py-3 rounded-xl font-bold"
             >
               Lanjutkan
             </button>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
