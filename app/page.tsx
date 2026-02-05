@@ -48,8 +48,8 @@ export default function LoginPage() {
         );
       }
 
-      // Navigasi ke dashboard cars
-      router.push("/dashboard/cars");
+      // Navigasi ke halaman dashboard 
+      router.push("/dashboard");
     } catch (err: any) {
       setStatus({ loading: false, error: err.message });
     }

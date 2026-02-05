@@ -1,38 +1,124 @@
-import { Info } from "lucide-react";
+"use client";
+
+import { Info, ChevronDown } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function DashboardPage() {
-  const carStatus = [
-    {
-      name: "Toyota Agya",
-      status: "Disewakan",
-      driver: "Aprilla Nurindah Z",
-      color: "blue",
-    },
-    {
-      name: "Toyota Sprinter",
-      status: "Tersedia",
-      driver: "-",
-      color: "green",
-    },
-    {
-      name: "Honda Civic",
-      status: "Tersedia",
-      driver: "-",
-      color: "green",
-    },
-    {
-      name: "Suzuki Ertiga",
-      status: "Tersedia",
-      driver: "-",
-      color: "green",
-    },
+  const [cars, setCars] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedYear, setSelectedYear] = useState("2026");
+  const [selectedMonth, setSelectedMonth] = useState("1");
+
+  const years = ["2020", "2021", "2022", "2023", "2024", "2025", "2026"];
+  const months = [
+    { value: "1", label: "Januari" },
+    { value: "2", label: "Februari" },
+    { value: "3", label: "Maret" },
+    { value: "4", label: "April" },
+    { value: "5", label: "Mei" },
+    { value: "6", label: "Juni" },
+    { value: "7", label: "Juli" },
+    { value: "8", label: "Agustus" },
+    { value: "9", label: "September" },
+    { value: "10", label: "Oktober" },
+    { value: "11", label: "November" },
+    { value: "12", label: "Desember" },
   ];
+
+  useEffect(() => {
+    const fetchCars = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+
+        const params = new URLSearchParams({
+          year: selectedYear,
+          month: selectedMonth,
+        });
+
+        const res = await fetch(
+          `https://rentoka.olifemassage.com/api/provider/dashboard?${params}`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const json = await res.json();
+        console.log("dashboard response:", json);
+
+        const carsArray = Array.isArray(json.data) ? json.data : [];
+
+        const mappedData = carsArray.map((car: any) => ({
+          ...car,
+          color: car.status === "Disewakan" ? "blue" : "green",
+        }));
+
+        setCars(mappedData);
+      } catch (error) {
+        console.error("Gagal mengambil data mobil", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCars();
+  }, [selectedYear, selectedMonth]);
 
   return (
     <>
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-900">Statistik hari ini</h2>
-        <p className="text-gray-500 text-sm mt-1">Selasa, 20 Januari 2026</p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Statistik hari ini
+            </h2>
+            <p className="text-gray-500 text-sm mt-1">
+              Selasa, 20 Januari 2026
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="relative">
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition"
+              >
+                {months.map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+              />
+            </div>
+
+            <div className="relative">
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="appearance-none bg-white border border-gray-200 rounded-lg px-4 py-2 pr-10 text-sm font-medium text-gray-700 hover:border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent cursor-pointer transition"
+              >
+                {years.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                size={16}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
@@ -111,53 +197,59 @@ export default function DashboardPage() {
             Live Car Status
           </h2>
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <table className="w-full text-left">
-              <thead className="border-b border-gray-100">
-                <tr>
-                  <th className="py-4 px-6 text-sm font-bold text-gray-600">
-                    Car Name
-                  </th>
-                  <th className="py-4 px-6 text-sm font-bold text-gray-600">
-                    Status
-                  </th>
-                  <th className="py-4 px-6 text-sm font-bold text-gray-600">
-                    Driver
-                  </th>
-                  <th className="py-4 px-6 text-sm font-bold text-gray-600 text-right">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {carStatus.map((car, index) => (
-                  <tr key={index} className="hover:bg-gray-50 transition">
-                    <td className="py-4 px-6 text-gray-800 font-medium">
-                      {car.name}
-                    </td>
-                    <td className="py-4 px-6">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className={`w-2 h-2 rounded-full ${car.color === "blue" ? "bg-blue-600" : "bg-green-500"}`}
-                        ></div>
-                        <span className="text-sm text-gray-600 font-medium">
-                          {car.status}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-4 px-6 text-sm text-gray-500">
-                      {car.driver}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      {car.color === "blue" && (
-                        <button className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-3 py-1.5 rounded-md font-bold transition inline-flex items-center gap-1 shadow-sm">
-                          <Info size={12} /> Detail
-                        </button>
-                      )}
-                    </td>
+            {loading ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              </div>
+            ) : (
+              <table className="w-full text-left">
+                <thead className="border-b border-gray-100">
+                  <tr>
+                    <th className="py-4 px-6 text-sm font-bold text-gray-600">
+                      Car Name
+                    </th>
+                    <th className="py-4 px-6 text-sm font-bold text-gray-600">
+                      Status
+                    </th>
+                    <th className="py-4 px-6 text-sm font-bold text-gray-600">
+                      Driver
+                    </th>
+                    <th className="py-4 px-6 text-sm font-bold text-gray-600 text-right">
+                      Action
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-50">
+                  {cars.map((car, index) => (
+                    <tr key={index} className="hover:bg-gray-50 transition">
+                      <td className="py-4 px-6 text-gray-800 font-medium">
+                        {car.name}
+                      </td>
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`w-2 h-2 rounded-full ${car.color === "blue" ? "bg-blue-600" : "bg-green-500"}`}
+                          ></div>
+                          <span className="text-sm text-gray-600 font-medium">
+                            {car.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-500">
+                        {car.driver}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        {car.color === "blue" && (
+                          <button className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] px-3 py-1.5 rounded-md font-bold transition inline-flex items-center gap-1 shadow-sm">
+                            <Info size={12} /> Detail
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
             <div className="p-8"></div>
           </div>
         </div>
