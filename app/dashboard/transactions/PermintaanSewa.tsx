@@ -19,37 +19,73 @@ export default function PermintaanSewa({
 
   const handleApproveConfirm = async () => {
     try {
-      await fetch(
-        `https://rentoka.olifemassage.com/api/provider/transactions/${data.id}/approve`,
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `https://rentoka.olifemassage.com/api/provider/transaction/status`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-        }
+          body: JSON.stringify({
+            id_transaction: data.id,
+            status: "APPROVED",
+          }),
+        },
       );
-      setShowApprove(false);
-      setIsProcessed(true);
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setShowApprove(false);
+        setIsProcessed(true);
+        // Optional: Refresh data or show success message
+        console.log("Transaction approved successfully:", result.message);
+      } else {
+        console.error("Failed to approve transaction:", result.message);
+        alert("Gagal menyetujui transaksi. Silakan coba lagi.");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error approving transaction:", err);
+      alert("Terjadi kesalahan. Silakan coba lagi.");
     }
   };
 
   const handleRejectConfirm = async () => {
     try {
-      await fetch(
-        `https://rentoka.olifemassage.com/api/provider/transactions/${data.id}/reject`,
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `https://rentoka.olifemassage.com/api/provider/transaction/status`,
         {
-          method: "POST",
+          method: "PUT",
           headers: {
             "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
           },
-        }
+          body: JSON.stringify({
+            id_transaction: data.id,
+            status: "REJECTED",
+          }),
+        },
       );
-      setShowReject(false);
-      setIsProcessed(true);
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setShowReject(false);
+        setIsProcessed(true);
+        // Optional: Refresh data or show success message
+        console.log("Transaction rejected successfully:", result.message);
+      } else {
+        console.error("Failed to reject transaction:", result.message);
+        alert("Gagal menolak transaksi. Silakan coba lagi.");
+      }
     } catch (err) {
-      console.error(err);
+      console.error("Error rejecting transaction:", err);
+      alert("Terjadi kesalahan. Silakan coba lagi.");
     }
   };
 
@@ -91,19 +127,20 @@ export default function PermintaanSewa({
             </div>
 
             <div className="flex gap-2">
+              <button
+                onClick={onDetailSewaClick}
+                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition shadow-sm"
+              >
+                <Info size={16} />
+                Detail
+              </button>
+
               {!isProcessed ? (
                 <>
                   <button
-                    onClick={onDetailSewaClick}
-                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold transition shadow-sm"
-                  >
-                    <Info size={16} />
-                    Detail
-                  </button>
-
-                  <button
                     onClick={() => setShowApprove(true)}
                     className="flex items-center justify-center w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition shadow-sm"
+                    title="Terima"
                   >
                     <Check size={18} />
                   </button>
@@ -111,6 +148,7 @@ export default function PermintaanSewa({
                   <button
                     onClick={() => setShowReject(true)}
                     className="flex items-center justify-center w-9 h-9 bg-red-600 hover:bg-red-700 text-white rounded-full transition shadow-sm"
+                    title="Tolak"
                   >
                     <X size={18} />
                   </button>
