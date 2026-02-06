@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { User, X } from "lucide-react";
 
 interface TransactionData {
@@ -16,11 +17,22 @@ interface TransactionData {
 }
 
 interface DetailSewaProps {
-  transaction: TransactionData;
+  transactionId: number;
   onClose: () => void;
 }
 
-export default function DetailSewa({ transaction, onClose }: DetailSewaProps) {
+export default function DetailSewa({ transactionId, onClose }: DetailSewaProps) {
+  const [transaction, setTransaction] = useState<TransactionData | null>(null);
+
+  useEffect(() => {
+    fetch(`https://rentoka.olifemassage.com/api/provider/transactions/${transactionId}`)
+      .then(res => res.json())
+      .then(data => setTransaction(data))
+      .catch(err => console.error(err));
+  }, [transactionId]);
+
+  if (!transaction) return null;
+
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden relative">
@@ -47,33 +59,23 @@ export default function DetailSewa({ transaction, onClose }: DetailSewaProps) {
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Nama Lengkap</p>
-                  <p className="text-sm font-bold text-gray-900">
-                    {transaction.name}
-                  </p>
+                  <p className="text-sm font-bold text-gray-900">{transaction.name}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">No. KTP</p>
-                  <p className="text-sm font-bold text-gray-900">
-                    {transaction.ktp}
-                  </p>
+                  <p className="text-sm font-bold text-gray-900">{transaction.ktp}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">No. Handphone</p>
-                  <p className="text-sm font-bold text-gray-900">
-                    {transaction.phone}
-                  </p>
+                  <p className="text-sm font-bold text-gray-900">{transaction.phone}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-400 mb-1">Alamat Email</p>
-                  <p className="text-sm font-bold text-gray-900">
-                    {transaction.email}
-                  </p>
+                  <p className="text-sm font-bold text-gray-900">{transaction.email}</p>
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-xs text-gray-400 mb-1">Alamat</p>
-                  <p className="text-sm font-bold text-gray-900 leading-relaxed">
-                    {transaction.address}
-                  </p>
+                  <p className="text-sm font-bold text-gray-900 leading-relaxed">{transaction.address}</p>
                 </div>
               </div>
             </div>
@@ -86,32 +88,28 @@ export default function DetailSewa({ transaction, onClose }: DetailSewaProps) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
               <div>
                 <p className="text-xs text-gray-400 mb-1">Tanggal Sewa</p>
-                <p className="text-sm font-bold text-gray-900">
-                  {transaction.date}
-                </p>
+                <p className="text-sm font-bold text-gray-900">{transaction.date}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Mobil Disewa</p>
-                <p className="text-sm font-bold text-gray-900">
-                  {transaction.carName}
-                </p>
+                <p className="text-sm font-bold text-gray-900">{transaction.carName}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Durasi</p>
-                <p className="text-sm font-bold text-gray-900">
-                  {transaction.duration}
-                </p>
+                <p className="text-sm font-bold text-gray-900">{transaction.duration}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Total Biaya</p>
-                <p className="text-lg font-bold text-blue-600">
-                  {transaction.totalPrice}
-                </p>
+                <p className="text-lg font-bold text-blue-600">{transaction.totalPrice}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">Status Pembayaran</p>
                 <span
-                  className={`inline-block px-2 py-1 rounded text-xs font-bold ${transaction.status === "Lunas" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+                  className={`inline-block px-2 py-1 rounded text-xs font-bold ${
+                    transaction.status === "Lunas"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-yellow-100 text-yellow-700"
+                  }`}
                 >
                   {transaction.status}
                 </span>

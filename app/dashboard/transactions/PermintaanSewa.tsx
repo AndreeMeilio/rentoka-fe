@@ -15,17 +15,42 @@ export default function PermintaanSewa({
 }: PermintaanSewaProps) {
   const [showApprove, setShowApprove] = useState(false);
   const [showReject, setShowReject] = useState(false);
-
   const [isProcessed, setIsProcessed] = useState(false);
 
-  const handleApproveConfirm = () => {
-    setShowApprove(false);
-    setIsProcessed(true);
+  const handleApproveConfirm = async () => {
+    try {
+      await fetch(
+        `https://rentoka.olifemassage.com/api/provider/transactions/${data.id}/approve`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setShowApprove(false);
+      setIsProcessed(true);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleRejectConfirm = () => {
-    setShowReject(false);
-    setIsProcessed(true);
+  const handleRejectConfirm = async () => {
+    try {
+      await fetch(
+        `https://rentoka.olifemassage.com/api/provider/transactions/${data.id}/reject`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      setShowReject(false);
+      setIsProcessed(true);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -140,7 +165,6 @@ function Reject({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl p-8 flex flex-col items-center text-center">
-        {/* Icon Silang dalam Lingkaran */}
         <div className="w-16 h-16 rounded-full border-4 border-black flex items-center justify-center mb-6">
           <X size={32} strokeWidth={4} className="text-black" />
         </div>
