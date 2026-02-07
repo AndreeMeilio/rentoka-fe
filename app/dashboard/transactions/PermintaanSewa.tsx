@@ -16,8 +16,11 @@ export default function PermintaanSewa({
   const [showApprove, setShowApprove] = useState(false);
   const [showReject, setShowReject] = useState(false);
   const [isProcessed, setIsProcessed] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleApproveConfirm = async () => {
+  const handleApproveClick = async () => {
+    setIsLoading(true);
+
     try {
       const token = localStorage.getItem("token");
 
@@ -39,9 +42,8 @@ export default function PermintaanSewa({
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setShowApprove(false);
         setIsProcessed(true);
-        // Optional: Refresh data or show success message
+        setShowApprove(true);
         console.log("Transaction approved successfully:", result.message);
       } else {
         console.error("Failed to approve transaction:", result.message);
@@ -50,10 +52,14 @@ export default function PermintaanSewa({
     } catch (err) {
       console.error("Error approving transaction:", err);
       alert("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleRejectConfirm = async () => {
+  const handleRejectClick = async () => {
+    setIsLoading(true);
+
     try {
       const token = localStorage.getItem("token");
 
@@ -75,9 +81,8 @@ export default function PermintaanSewa({
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setShowReject(false);
         setIsProcessed(true);
-        // Optional: Refresh data or show success message
+        setShowReject(true);
         console.log("Transaction rejected successfully:", result.message);
       } else {
         console.error("Failed to reject transaction:", result.message);
@@ -86,7 +91,14 @@ export default function PermintaanSewa({
     } catch (err) {
       console.error("Error rejecting transaction:", err);
       alert("Terjadi kesalahan. Silakan coba lagi.");
+    } finally {
+      setIsLoading(false);
     }
+  };
+
+  const handleModalClose = () => {
+    setShowApprove(false);
+    setShowReject(false);
   };
 
   return (
@@ -138,19 +150,37 @@ export default function PermintaanSewa({
               {!isProcessed ? (
                 <>
                   <button
-                    onClick={() => setShowApprove(true)}
-                    className="flex items-center justify-center w-9 h-9 bg-blue-600 hover:bg-blue-700 text-white rounded-full transition shadow-sm"
+                    onClick={handleApproveClick}
+                    disabled={isLoading}
+                    className={`flex items-center justify-center w-9 h-9 ${
+                      isLoading
+                        ? "bg-blue-400 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    } text-white rounded-full transition shadow-sm relative`}
                     title="Terima"
                   >
-                    <Check size={18} />
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Check size={18} />
+                    )}
                   </button>
 
                   <button
-                    onClick={() => setShowReject(true)}
-                    className="flex items-center justify-center w-9 h-9 bg-red-600 hover:bg-red-700 text-white rounded-full transition shadow-sm"
+                    onClick={handleRejectClick}
+                    disabled={isLoading}
+                    className={`flex items-center justify-center w-9 h-9 ${
+                      isLoading
+                        ? "bg-red-400 cursor-not-allowed"
+                        : "bg-red-600 hover:bg-red-700"
+                    } text-white rounded-full transition shadow-sm relative`}
                     title="Tolak"
                   >
-                    <X size={18} />
+                    {isLoading ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <X size={18} />
+                    )}
                   </button>
                 </>
               ) : (
@@ -168,8 +198,8 @@ export default function PermintaanSewa({
         </div>
       </div>
 
-      {showApprove && <Approve onClose={handleApproveConfirm} />}
-      {showReject && <Reject onClose={handleRejectConfirm} />}
+      {showApprove && <Approve onClose={handleModalClose} />}
+      {showReject && <Reject onClose={handleModalClose} />}
     </>
   );
 }
